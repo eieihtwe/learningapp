@@ -1,7 +1,4 @@
-# Docs for the Azure Web Apps Deploy action: https://github.com/Azure/webapps-deploy
-# More GitHub Actions for Azure: https://github.com/Azure/actions
-
-name: Build and deploy ASP app to Azure Web App - myWebApp-11
+name: Build and deploy ASP.NET Core app to Azure Web App - myWebApp-11
 
 on:
   push:
@@ -10,57 +7,34 @@ on:
   workflow_dispatch:
 
 jobs:
-  build:
+  build-and-deploy:
     runs-on: windows-latest
-    permissions:
-      contents: read #This is required for actions/checkout
 
     steps:
       - uses: actions/checkout@v4
 
-      - name: Setup MSBuild path
-        uses: microsoft/setup-msbuild@v1.0.2
-
-      - name: Setup NuGet
-        uses: NuGet/setup-nuget@v1.0.5
-
-      - name: Restore NuGet packages
-        run: nuget restore
-
-      - name: Publish to folder
-        run: msbuild /nologo /verbosity:m /t:Build /t:pipelinePreDeployCopyAllFilesToOneFolder /p:_PackageTempDir="\published\"
-
-      - name: Upload artifact for deployment job
-        uses: actions/upload-artifact@v4
+      - name: Setup .NET 9 SDK
+        uses: actions/setup-dotnet@v3
         with:
-          name: ASP-app
-          path: '/published/**'
+          dotnet-version: '9.0.x'
 
-  deploy:
-    runs-on: windows-latest
-    needs: build
-    permissions:
-      id-token: write #This is required for requesting the JWT
-      contents: read #This is required for actions/checkout
+      - name: Restore dependencies
+        run: dotnet restore
 
-    steps:
-      - name: Download artifact from build job
-        uses: actions/download-artifact@v4
-        with:
-          name: ASP-app
-      
+      - name: Build
+        run: dotnet build --configuration Release --no-restore
+
+      - name: Publish
+        run: dotnet publish --configuration Release --output ./publish --no-build
+
       - name: Login to Azure
-        uses: azure/login@v2
+        uses: azure/login@v1
         with:
-          client-id: ${{ secrets.AZUREAPPSERVICE_CLIENTID_3134BC85A38344DAB49E86BB14D030AE }}
-          tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_B7901FC2B09B48C6B10F72A53869E8B8 }}
-          subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_5786AC8C2406484CB6DCC3ADE82F3442 }}
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
 
       - name: Deploy to Azure Web App
-        id: deploy-to-webapp
         uses: azure/webapps-deploy@v3
         with:
           app-name: 'myWebApp-11'
           slot-name: 'Production'
-          package: .
-          
+          package: ./publish
