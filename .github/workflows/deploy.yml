@@ -1,1 +1,11 @@
+name: Disabled workflow
+
+on: [push]
+
+jobs:
+  noop:
+    runs-on: ubuntu-latest
+    steps:
+      - name: No operation
+        run: echo "This workflow is disabled."
 
